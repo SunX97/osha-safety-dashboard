@@ -23,7 +23,7 @@ def load_data():
         import urllib.request
         # REPLACE 'YourHFUsername' WITH YOUR ACTUAL HUGGING FACE USERNAME!
         hf_username = "surajsasmal2814"
-        url = f"https://huggingface.co/datasets/{surajsasmal2814}/osha-dataset/raw/main/labeled_osha_dataset_ultimate.csv"
+        url = "https://huggingface.co/datasets/surajsasmal2814/osha-dataset/raw/main/labeled_osha_dataset_ultimate.csv"
         try:
             urllib.request.urlretrieve(url, dataset_path)
         except Exception as e:
