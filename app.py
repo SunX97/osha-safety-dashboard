@@ -38,7 +38,6 @@ def load_models():
     models = {}
     hf_username = "surajsasmal2814"
     
-    # We removed the try/except block so you can see exact errors if a repo is missing
     models['bert_act'] = pipeline("text-classification", model=f"{hf_username}/osha-activity")
     models['bert_sev'] = pipeline("text-classification", model=f"{hf_username}/osha-severity")
     
@@ -147,17 +146,59 @@ with tab2:
     st.subheader("Global Benchmark Metrics")
     st.markdown("Performance comparison across all four algorithms evaluated during the training pipeline.")
     
-    # You can update these hardcoded numbers to match the exact output from your miniprojectconstruction.py JSON files
+    # Store metrics as pure floats for plotting
     metrics_data = {
         "Model": ["BERT", "DistilBERT", "XGBoost", "Random Forest"],
-        "Accuracy": ["99.83%", "99.78%", "88.75%", "85.30%"], # (Update XGB/RF with your actual console output too!)
-        "Precision": ["99.83%", "99.78%", "88.10%", "84.90%"],
-        "Recall": ["99.83%", "99.78%", "87.95%", "83.50%"],
-        "F1 Score": ["99.83%", "99.78%", "88.02%", "84.15%"]
+        "Accuracy": [99.83, 99.78, 88.75, 85.30],
+        "Precision": [99.83, 99.78, 88.10, 84.90],
+        "Recall": [99.83, 99.78, 87.95, 83.50],
+        "F1 Score": [99.83, 99.78, 88.02, 84.15]
     }
     
     metrics_df = pd.DataFrame(metrics_data)
-    st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+    
+    # 1. Display Formatted Dataframe
+    display_df = metrics_df.copy()
+    for col in ["Accuracy", "Precision", "Recall", "F1 Score"]:
+        display_df[col] = display_df[col].apply(lambda x: f"{x:.2f}%")
+    
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    
+    st.markdown("---")
+    st.markdown("### Model Performance Comparison")
+    
+    # 2. Reshape data for Seaborn
+    df_melted = metrics_df.melt(id_vars="Model", var_name="Metric", value_name="Score (%)")
+    
+    # 3. Plot the Grouped Bar Chart
+    fig_metrics, ax_metrics = plt.subplots(figsize=(10, 5))
+    sns.barplot(
+        data=df_melted, 
+        x="Metric", 
+        y="Score (%)", 
+        hue="Model", 
+        palette="viridis", 
+        ax=ax_metrics
+    )
+    
+    # Format graph
+    ax_metrics.set_ylim(75, 105) # Scale to emphasize differences
+    ax_metrics.set_ylabel("Score (%)", fontweight='bold')
+    ax_metrics.set_xlabel("")
+    ax_metrics.set_title("Algorithm Performance by Metric", fontweight="bold", fontsize=12)
+    
+    # Add number labels on top of each bar
+    for p in ax_metrics.patches:
+        ax_metrics.annotate(f"{p.get_height():.1f}", 
+                            (p.get_x() + p.get_width() / 2., p.get_height()), 
+                            ha='center', va='center', xytext=(0, 5), 
+                            textcoords='offset points', fontsize=9)
+                            
+    # Move legend outside the plot area
+    plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left', borderaxespad=0)
+    plt.tight_layout()
+    
+    st.pyplot(fig_metrics)
 
 with tab3:
     st.subheader("Exploratory Data Analysis")
