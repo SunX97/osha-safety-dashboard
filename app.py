@@ -52,7 +52,7 @@ loaded_models = load_models()
 def predict_accident(description):
     text_lower = str(description).lower()
     
-    blacklist = ["bert", "distilbert", "transformer", "accuracy", "f1 score", "random forest", "tf-idf"]
+   blacklist = ["bert", "distilbert", "accuracy", "f1 score", "random forest", "tf-idf"]
     if any(term in text_lower for term in blacklist):
         err = "[Out of Domain Input]"
         return (err, err, err, err, err, err, err, err)
