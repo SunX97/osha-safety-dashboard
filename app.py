@@ -72,16 +72,40 @@ def predict_accident(description):
     d_act = loaded_models['dist_act'](description)[0]
     d_sev = loaded_models['dist_sev'](description)[0]
     
-    def format_lbl(pred):
-        return f"{pred['label']} (Conf: {pred['score']:.2%})"
+    # LabelEncoder automatically sorted these alphabetically during your training
+    activity_classes = [
+        'Demolition Works', 'Electrical Installation', 'Excavation & Trenching',
+        'General Construction Activity', 'Heavy Machinery & Haulage',
+        'Landscaping & Maintenance', 'Maritime & Diving Operations',
+        'Scaffolding & Work at Height', 'Slab Casting & Concrete Pouring',
+        'Structural Steel & Ironwork'
+    ]
+    
+    severity_classes = [
+        'Fatal', 'Low', 'Medium'
+    ]
 
+    def format_lbl(pred, class_list):
+        label = pred['label']
+        # If output is 'LABEL_0', extract the '0' and find the real name in the list
+        if label.startswith('LABEL_'):
+            idx = int(label.replace('LABEL_', ''))
+            label = class_list[idx]
+        return f"{label} (Conf: {pred['score']:.2%})"
+
+    # ML Baseline Mock Outputs
     rf_act_out = "Scaffolding & Work at Height (Conf: 74.20%)"
     rf_sev_out = "Medium (Conf: 68.50%)"
     xgb_act_out = "Scaffolding & Work at Height (Conf: 81.10%)"
     xgb_sev_out = "Medium (Conf: 72.40%)"
 
-    return (format_lbl(b_act), format_lbl(b_sev), format_lbl(d_act), format_lbl(d_sev), 
-            rf_act_out, rf_sev_out, xgb_act_out, xgb_sev_out)
+    return (
+        format_lbl(b_act, activity_classes), 
+        format_lbl(b_sev, severity_classes), 
+        format_lbl(d_act, activity_classes), 
+        format_lbl(d_sev, severity_classes), 
+        rf_act_out, rf_sev_out, xgb_act_out, xgb_sev_out
+    )
 
 # ==========================================
 # 3. PLOTTING FUNCTIONS 
