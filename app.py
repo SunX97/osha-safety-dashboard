@@ -16,21 +16,16 @@ st.markdown("An NLP-based auditing dashboard comparing deep learning (BERT) with
 
 @st.cache_data
 def load_data():
-    dataset_path = "labeled_osha_dataset_ultimate.csv"
+    # Using /resolve/main/ is Hugging Face's official direct download path
+    url = "https://huggingface.co/datasets/surajsasmal2814/osha-dataset/resolve/main/labeled_osha_dataset_ultimate.csv"
     
-    # If the file isn't present locally (e.g., on Streamlit Cloud), download it from Hugging Face
-    if not os.path.exists(dataset_path):
-        import urllib.request
-        # REPLACE 'YourHFUsername' WITH YOUR ACTUAL HUGGING FACE USERNAME!
-        hf_username = "surajsasmal2814"
-        url = "https://huggingface.co/datasets/surajsasmal2814/osha-dataset/raw/main/labeled_osha_dataset_ultimate.csv"
-        try:
-            urllib.request.urlretrieve(url, dataset_path)
-        except Exception as e:
-            st.error(f"Failed to download dataset from Hugging Face: {e}")
-            return pd.DataFrame({'Description': [], 'Activity': [], 'Severity': [], 'word_count': []})
-            
-    return pd.read_csv(dataset_path)
+    try:
+        # Pandas can read directly from the internet! No urllib needed.
+        return pd.read_csv(url)
+    except Exception as e:
+        st.error(f"Error loading dataset: {e}")
+        # Safe fallback so the app doesn't crash completely
+        return pd.DataFrame({'Description': [], 'Activity': [], 'Severity': [], 'word_count': []})
 
 df_eda = load_data()
 
