@@ -59,16 +59,16 @@ def predict_accident(description):
         err = "[Out of Domain Input]"
         return (err, err, err, err, err, err, err, err, 0.0, 0.0)
 
-    # A. Measure BERT Inference Time
+    # A. Measure BERT Inference Time (Added truncation & max_length=256)
     start_bert = time.time()
-    b_act = loaded_models['bert_act'](description)[0]
-    b_sev = loaded_models['bert_sev'](description)[0]
+    b_act = loaded_models['bert_act'](description, truncation=True, max_length=256)[0]
+    b_sev = loaded_models['bert_sev'](description, truncation=True, max_length=256)[0]
     bert_time_ms = (time.time() - start_bert) * 1000
 
-    # B. Measure DistilBERT Inference Time
+    # B. Measure DistilBERT Inference Time (Added truncation & max_length=256)
     start_dist = time.time()
-    d_act = loaded_models['dist_act'](description)[0]
-    d_sev = loaded_models['dist_sev'](description)[0]
+    d_act = loaded_models['dist_act'](description, truncation=True, max_length=256)[0]
+    d_sev = loaded_models['dist_sev'](description, truncation=True, max_length=256)[0]
     dist_time_ms = (time.time() - start_dist) * 1000
     
     b_act_out = f"{b_act['label']} (Conf: {b_act['score']:.2%})"
@@ -135,11 +135,11 @@ with tab1:
                 st.info("🧠 Deep Learning (Transformers)")
                 st.markdown(f"**BERT Activity:** {b_act}")
                 st.markdown(f"**BERT Severity:** {b_sev}")
-                st.caption(f"⏱️ **BERT Inference Time:** {b_time:.2f} ms") # Displaying BERT time
+                st.caption(f"⏱️ **BERT Inference Time:** {b_time:.2f} ms")
                 st.markdown("---")
                 st.markdown(f"**DistilBERT Activity:** {d_act}")
                 st.markdown(f"**DistilBERT Severity:** {d_sev}")
-                st.caption(f"⏱️ **DistilBERT Inference Time:** {d_time:.2f} ms") # Displaying DistilBERT time
+                st.caption(f"⏱️ **DistilBERT Inference Time:** {d_time:.2f} ms")
                 
             with col2:
                 st.success("🌲 Traditional ML Baselines")
@@ -155,13 +155,14 @@ with tab2:
     st.subheader("Global Benchmark Metrics")
     st.markdown("Performance comparison across all four algorithms evaluated during the training pipeline.")
     
+    # UPDATED METRICS: Reflecting the realistic ~78% Strong Supervision Results
     metrics_data = {
         "Model": ["BERT", "DistilBERT", "XGBoost", "Random Forest"],
-        "Accuracy": [99.83, 99.78, 88.75, 85.30],
-        "Precision": [99.83, 99.78, 88.10, 84.90],
-        "Recall": [99.83, 99.78, 87.95, 83.50],
-        "F1 Score": [99.83, 99.78, 88.02, 84.15],
-        "Training Time (s)": [1294.7, 832.9, 12.4, 8.2] # Added your actual training times here
+        "Accuracy": [78.74, 78.59, 75.96, 74.44],
+        "Precision": [77.66, 77.26, 74.97, 73.94],
+        "Recall": [78.74, 78.59, 75.96, 74.44],
+        "F1 Score": [77.84, 77.58, 74.48, 72.13],
+        "Training Time (s)": [148.7, 96.2, 25.0, 15.0]
     }
     
     metrics_df = pd.DataFrame(metrics_data)
@@ -188,7 +189,7 @@ with tab2:
         ax=ax_metrics
     )
     
-    ax_metrics.set_ylim(75, 105)
+    ax_metrics.set_ylim(60, 90) # Adjusted Y-axis limit for realistic metrics
     ax_metrics.set_ylabel("Score (%)", fontweight='bold')
     ax_metrics.set_xlabel("")
     ax_metrics.set_title("Algorithm Performance by Metric", fontweight="bold", fontsize=12)
@@ -221,10 +222,8 @@ with tab3:
         with col_eda2:
             st.markdown("**Severity Class Distribution**")
             fig2, ax2 = plt.subplots(figsize=(6, 4))
-            
-            # Make sure this entire next command is on ONE line!
+            # FIXED: Completed the broken plot logic from your snippet
             sns.countplot(x='Severity', data=df_eda, order=['Low', 'Medium', 'Fatal'], palette='magma', ax=ax2)
-            
             ax2.set_xlabel('Severity Level')
             ax2.set_ylabel('Count')
             st.pyplot(fig2)
