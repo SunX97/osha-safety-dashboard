@@ -221,4 +221,10 @@ with tab3:
         with col_eda2:
             st.markdown("**Severity Class Distribution**")
             fig2, ax2 = plt.subplots(figsize=(6, 4))
-            sns.countplot(x='
+            
+            # Make sure this entire next command is on ONE line!
+            sns.countplot(x='Severity', data=df_eda, order=['Low', 'Medium', 'Fatal'], palette='magma', ax=ax2)
+            
+            ax2.set_xlabel('Severity Level')
+            ax2.set_ylabel('Count')
+            st.pyplot(fig2)
