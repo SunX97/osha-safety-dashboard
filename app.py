@@ -6,6 +6,7 @@ import seaborn as sns
 from transformers import pipeline
 import re
 import random
+import time
 
 # ==========================================
 # PAGE CONFIGURATION
@@ -19,7 +20,6 @@ st.markdown("An NLP-based auditing dashboard comparing deep learning (BERT/Disti
 # ==========================================
 @st.cache_data
 def load_data():
-    # Using /resolve/main/ for direct CSV download from Hugging Face
     url = "https://huggingface.co/datasets/surajsasmal2814/osha-dataset/resolve/main/labeled_osha_dataset_ultimate.csv"
     try:
         return pd.read_csv(url)
@@ -34,7 +34,6 @@ df_eda = load_data()
 # ==========================================
 @st.cache_resource
 def load_models():
-    """Loads models from Hugging Face once and keeps them in memory"""
     models = {}
     hf_username = "surajsasmal2814"
     
@@ -46,12 +45,11 @@ def load_models():
         
     return models
 
-# Add a loading spinner so the user knows models are downloading
 with st.spinner("Downloading Transformer Models from Hugging Face..."):
     loaded_models = load_models()
 
 # ==========================================
-# 3. INFERENCE FUNCTION
+# 3. INFERENCE FUNCTION WITH TIME TRACKING
 # ==========================================
 def predict_accident(description):
     text_lower = str(description).lower()
@@ -59,20 +57,26 @@ def predict_accident(description):
     blacklist = ["bert", "distilbert", "accuracy", "f1 score", "random forest", "tf-idf"]
     if any(term in text_lower for term in blacklist):
         err = "[Out of Domain Input]"
-        return (err, err, err, err, err, err, err, err)
+        return (err, err, err, err, err, err, err, err, 0.0, 0.0)
 
-    # A. REAL Deep Learning Predictions (Native text output via id2label)
+    # A. Measure BERT Inference Time
+    start_bert = time.time()
     b_act = loaded_models['bert_act'](description)[0]
     b_sev = loaded_models['bert_sev'](description)[0]
+    bert_time_ms = (time.time() - start_bert) * 1000
+
+    # B. Measure DistilBERT Inference Time
+    start_dist = time.time()
     d_act = loaded_models['dist_act'](description)[0]
     d_sev = loaded_models['dist_sev'](description)[0]
+    dist_time_ms = (time.time() - start_dist) * 1000
     
     b_act_out = f"{b_act['label']} (Conf: {b_act['score']:.2%})"
     b_sev_out = f"{b_sev['label']} (Conf: {b_sev['score']:.2%})"
     d_act_out = f"{d_act['label']} (Conf: {d_act['score']:.2%})"
     d_sev_out = f"{d_sev['label']} (Conf: {d_sev['score']:.2%})"
 
-    # B. Simulated Traditional ML Baselines
+    # C. Simulated Traditional ML Baselines
     simulated_act = "General Construction Activity"
     if re.search(r'\b(forklift|truck|crane|vehicle|excavator|machine)\b', text_lower):
         simulated_act = "Heavy Machinery & Haulage"
@@ -105,7 +109,8 @@ def predict_accident(description):
         b_act_out, b_sev_out, 
         d_act_out, d_sev_out, 
         rf_act_out, rf_sev_out, 
-        xgb_act_out, xgb_sev_out
+        xgb_act_out, xgb_sev_out,
+        bert_time_ms, dist_time_ms
     )
 
 # ==========================================
@@ -121,7 +126,7 @@ with tab1:
         if user_input.strip() == "":
             st.warning("Please enter an accident narrative first.")
         else:
-            (b_act, b_sev, d_act, d_sev, rf_act, rf_sev, xgb_act, xgb_sev) = predict_accident(user_input)
+            (b_act, b_sev, d_act, d_sev, rf_act, rf_sev, xgb_act, xgb_sev, b_time, d_time) = predict_accident(user_input)
             
             st.markdown("### Model Predictions")
             col1, col2 = st.columns(2)
@@ -130,47 +135,49 @@ with tab1:
                 st.info("🧠 Deep Learning (Transformers)")
                 st.markdown(f"**BERT Activity:** {b_act}")
                 st.markdown(f"**BERT Severity:** {b_sev}")
+                st.caption(f"⏱️ **BERT Inference Time:** {b_time:.2f} ms") # Displaying BERT time
                 st.markdown("---")
                 st.markdown(f"**DistilBERT Activity:** {d_act}")
                 st.markdown(f"**DistilBERT Severity:** {d_sev}")
+                st.caption(f"⏱️ **DistilBERT Inference Time:** {d_time:.2f} ms") # Displaying DistilBERT time
                 
             with col2:
                 st.success("🌲 Traditional ML Baselines")
                 st.markdown(f"**Random Forest Act:** {rf_act}")
                 st.markdown(f"**Random Forest Sev:** {rf_sev}")
+                st.caption("⏱️ Inference Time: N/A (Simulated)")
                 st.markdown("---")
                 st.markdown(f"**XGBoost Activity:** {xgb_act}")
                 st.markdown(f"**XGBoost Severity:** {xgb_sev}")
+                st.caption("⏱️ Inference Time: N/A (Simulated)")
 
 with tab2:
     st.subheader("Global Benchmark Metrics")
     st.markdown("Performance comparison across all four algorithms evaluated during the training pipeline.")
     
-    # Store metrics as pure floats for plotting
     metrics_data = {
         "Model": ["BERT", "DistilBERT", "XGBoost", "Random Forest"],
         "Accuracy": [99.83, 99.78, 88.75, 85.30],
         "Precision": [99.83, 99.78, 88.10, 84.90],
         "Recall": [99.83, 99.78, 87.95, 83.50],
-        "F1 Score": [99.83, 99.78, 88.02, 84.15]
+        "F1 Score": [99.83, 99.78, 88.02, 84.15],
+        "Training Time (s)": [1294.7, 832.9, 12.4, 8.2] # Added your actual training times here
     }
     
     metrics_df = pd.DataFrame(metrics_data)
     
-    # 1. Display Formatted Dataframe
     display_df = metrics_df.copy()
     for col in ["Accuracy", "Precision", "Recall", "F1 Score"]:
         display_df[col] = display_df[col].apply(lambda x: f"{x:.2f}%")
+    display_df["Training Time (s)"] = display_df["Training Time (s)"].apply(lambda x: f"{x:,.1f}s")
     
     st.dataframe(display_df, use_container_width=True, hide_index=True)
     
     st.markdown("---")
     st.markdown("### Model Performance Comparison")
     
-    # 2. Reshape data for Seaborn
-    df_melted = metrics_df.melt(id_vars="Model", var_name="Metric", value_name="Score (%)")
+    df_melted = metrics_df.drop(columns=["Training Time (s)"]).melt(id_vars="Model", var_name="Metric", value_name="Score (%)")
     
-    # 3. Plot the Grouped Bar Chart
     fig_metrics, ax_metrics = plt.subplots(figsize=(10, 5))
     sns.barplot(
         data=df_melted, 
@@ -181,20 +188,17 @@ with tab2:
         ax=ax_metrics
     )
     
-    # Format graph
-    ax_metrics.set_ylim(75, 105) # Scale to emphasize differences
+    ax_metrics.set_ylim(75, 105)
     ax_metrics.set_ylabel("Score (%)", fontweight='bold')
     ax_metrics.set_xlabel("")
     ax_metrics.set_title("Algorithm Performance by Metric", fontweight="bold", fontsize=12)
     
-    # Add number labels on top of each bar
     for p in ax_metrics.patches:
         ax_metrics.annotate(f"{p.get_height():.1f}", 
                             (p.get_x() + p.get_width() / 2., p.get_height()), 
                             ha='center', va='center', xytext=(0, 5), 
                             textcoords='offset points', fontsize=9)
                             
-    # Move legend outside the plot area
     plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left', borderaxespad=0)
     plt.tight_layout()
     
@@ -217,9 +221,4 @@ with tab3:
         with col_eda2:
             st.markdown("**Severity Class Distribution**")
             fig2, ax2 = plt.subplots(figsize=(6, 4))
-            sns.countplot(x='Severity', data=df_eda, order=['Low', 'Medium', 'Fatal'], palette='magma', ax=ax2)
-            ax2.set_xlabel('Severity Level')
-            ax2.set_ylabel('Count')
-            st.pyplot(fig2)
-    else:
-        st.warning("Dataset failed to load. Check your Hugging Face visibility settings.")
+            sns.countplot(x='
