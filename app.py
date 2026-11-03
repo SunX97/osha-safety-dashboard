@@ -76,18 +76,17 @@ def predict_accident(description):
     d_act_out = f"{d_act['label']} (Conf: {d_act['score']:.2%})"
     d_sev_out = f"{d_sev['label']} (Conf: {d_sev['score']:.2%})"
 
-    # C. Simulated Traditional ML Baselines
-    simulated_act = "General Construction Activity"
-    if re.search(r'\b(forklift|truck|crane|vehicle|excavator|machine)\b', text_lower):
-        simulated_act = "Heavy Machinery & Haulage"
-    elif re.search(r'\b(steel|beam|iron|welding)\b', text_lower):
-        simulated_act = "Structural Steel & Ironwork"
-    elif re.search(r'\b(electrical|wire|shock|volt|electrocuted)\b', text_lower):
+   # Prioritize specific hazards over general fall keywords
+    if re.search(r'\b(electrical|wire|shock|volt|electrocuted)\b', text_lower):
         simulated_act = "Electrical Installation"
+    elif re.search(r'\b(forklift|truck|crane|vehicle|excavator|machine)\b', text_lower):
+        simulated_act = "Heavy Machinery & Haulage"
     elif re.search(r'\b(scaffold|fall|ladder|roof|bucket|lift)\b', text_lower):
         simulated_act = "Scaffolding & Work at Height"
     elif re.search(r'\b(trench|dig|excavate|collapse)\b', text_lower):
         simulated_act = "Excavation & Trenching"
+    elif re.search(r'\b(steel|beam|iron|welding)\b', text_lower):
+        simulated_act = "Structural Steel & Ironwork"
         
     simulated_sev = "Low"
     if re.search(r'\b(fatal|died|killed|electrocuted|instantly|passed away)\b', text_lower):
